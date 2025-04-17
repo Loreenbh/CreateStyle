@@ -1,0 +1,216 @@
+🧱 1. Installer les outils et dépendances
+
+Tu vas compiler SFML depuis les sources.
+✅ Commandes à lancer :
+
+sudo apt update
+sudo apt install git cmake build-essential \
+libx11-dev libxcursor-dev libxrandr-dev libgl1-mesa-dev \
+libudev-dev libopenal-dev libflac-dev libvorbis-dev \
+libfreetype6-dev libjpeg-dev
+
+
+📥 2. Télécharger et compiler SFML en statique
+✅ Étapes :
+
+git clone https://github.com/SFML/SFML.git
+cd SFML
+mkdir build && cd build
+
+cmake .. \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_SHARED_LIBS=OFF \
+  -DSFML_USE_STATIC_STD_LIBS=ON
+
+make -j$(nproc)
+
+➡️ Les fichiers .a (libs statiques) seront dans SFML/build/lib.
+
+
+
+
+📁 3. Préparer ton projet
+
+Imaginons une structure simple :
+
+MonJeu/
+├── main.cpp
+├── CMakeLists.txt
+├── assets/
+└── SFML/       <-- les sources SFML clonées avec dossier `build/`
+
+
+📄 4. Écrire ton CMakeLists.txt
+
+Voici un exemple complet et commenté :
+
+cmake_minimum_required(VERSION 3.16)
+project(MonJeu)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_BUILD_TYPE Release)
+
+# 📍 Dossier où SFML a été compilé
+set(SFML_STATIC_LIBRARIES TRUE)
+set(SFML_DIR "${CMAKE_SOURCE_DIR}/SFML/build")
+
+# 🔍 Trouver SFML compilée statiquement
+find_package(SFML 2.5 COMPONENTS graphics window system audio REQUIRED)
+
+# 🔨 Ton exécutable
+add_executable(MonJeu main.cpp)
+
+# 🔗 Lien avec SFML statique
+target_link_libraries(MonJeu
+    sfml-graphics
+    sfml-window
+    sfml-system
+    sfml-audio
+)
+
+
+⚙️ 5. Compiler ton projet
+
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
+
+➡️ Tu obtiens MonJeu (exécutable compilé statiquement) dans build/.
+
+
+🔍 6. Vérifier les dépendances restantes
+
+ldd MonJeu
+
+➡️ Tu devrais encore voir des dépendances vers :
+
+    libstdc++.so
+
+    libc.so
+
+    libGL.so
+
+    libX11.so
+
+    etc.
+
+On va les copier avec ton exécutable pour que ça tourne ailleurs.
+📦 7. Créer un dossier portable
+
+mkdir -p MonJeuPortable/lib
+cp ./MonJeu MonJeuPortable/
+cd MonJeuPortable
+
+Copier les libs nécessaires automatiquement :
+
+ldd MonJeu | grep "=>" | awk '{print $3}' | xargs -I '{}' cp -v '{}' ./lib/
+
+➡️ Ça met toutes les libs dynamiques dans lib/
+🚀 8. Ajouter un script de lancement
+
+Crée un fichier launch.sh dans MonJeuPortable/ :
+
+#!/bin/bash
+DIR="$(dirname "$(readlink -f "$0")")"
+export LD_LIBRARY_PATH="$DIR/lib"
+exec "$DIR/MonJeu"
+
+chmod +x launch.sh
+
+🧼 9. Finaliser ton dossier portable
+
+Structure finale :
+
+MonJeuPortable/
+├── MonJeu         ✅ binaire
+├── lib/           ✅ dépendances .so
+├── launch.sh      ✅ script de lancement
+└── assets/        ✅ images, sons, etc. (si ton jeu en a besoin)
+
+➡️ Tu peux maintenant zipper ce dossier, l’envoyer à un pote, et il pourra lancer ton jeu avec :
+
+./launch.sh
+
+Sans rien installer d’autre 🎉
+
+*******************************************************************************************
+Étape	Métaphore	Ce que tu fais
+apt install	Remplir ton garage d’outils et matériaux	Tu installes les bibliothèques nécessaires pour construire SFML
+git clone SFML	Récupérer les plans du moteur	Tu télécharges le code source de SFML
+cmake && make	Fabriquer le moteur toi-même	Tu compiles SFML en statique pour qu’il marche sans rien autour
+Ton jeu + SFML statique	Voiture avec moteur intégré	Tu construis une app portable, prête à rouler partout 🚗💨
+
+
+
+
+
+
+Étape par étape : où et comment faire chaque action ?
+1️⃣ Cloner SFML dans un dossier à part (par exemple dans ton dossier SFML/)
+
+Tu vas d'abord créer un dossier où tu vas récupérer le code source de SFML.
+
+cd ~
+git clone https://github.com/SFML/SFML.git
+cd SFML
+mkdir build
+cd build
+
+Ici :
+
+    git clone récupère toute la bibliothèque SFML dans le dossier SFML/ dans ton répertoire personnel (ou n'importe où ailleurs sur ta machine, mais l'idée est d'avoir SFML dans un dossier séparé).
+
+    Ensuite, tu crées un sous-dossier build/ où tu vas faire la compilation.
+
+2️⃣ Compiler SFML en version statique dans ce dossier
+
+Une fois que tu es dans SFML/build, tu utilises cmake et make pour compiler SFML en version statique (comme vu dans les étapes précédentes).
+
+cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DSFML_USE_STATIC_STD_LIBS=ON
+make -j$(nproc)
+
+➡️ Le moteur SFML est maintenant compilé et prêt à être utilisé, et les fichiers .a seront dans SFML/build/lib/ (les bibliothèques statiques).
+3️⃣ Aller dans ton répertoire monJeu/ (ton jeu)
+
+Ton jeu et SFML sont dans des dossiers séparés, donc maintenant, tu vas dans le répertoire où tu développes ton jeu :
+
+cd ~/monJeu
+
+Si ce répertoire n'existe pas encore, crée-le d'abord avec mkdir monJeu.
+4️⃣ Lier SFML à ton projet monJeu via CMakeLists.txt
+
+Dans ton projet de jeu, tu vas maintenant lier les bibliothèques SFML à ton jeu dans ton fichier CMakeLists.txt pour dire au compilateur où trouver SFML.
+
+Exemple de contenu de ton CMakeLists.txt dans monJeu/ :
+
+cmake_minimum_required(VERSION 3.10)
+project(MonJeu)
+
+# Indiquer où SFML a été compilé
+set(SFML_DIR ~/SFML/build/lib/cmake/SFML)
+
+# Trouver SFML
+find_package(SFML 2.5 COMPONENTS graphics window system audio REQUIRED)
+
+# Créer l'exécutable de ton jeu
+add_executable(MonJeu main.cpp)
+
+# Lier SFML à ton projet de jeu
+target_link_libraries(MonJeu sfml-graphics sfml-window sfml-system sfml-audio)
+
+Ici :
+
+    Tu dis où SFML se trouve via SFML_DIR.
+
+    Tu lances find_package pour dire à CMake d’utiliser la SFML compilée dans ton projet.
+
+En résumé :
+
+    Cloner SFML dans un dossier séparé (~/SFML).
+
+    Compiler SFML en version statique dans ~/SFML/build/.
+
+    Dans ton projet de jeu (monJeu), tu lieras SFML à ton jeu via le fichier CMakeLists.txt.
+
+🔑 Important : SFML et ton jeu sont dans des dossiers distincts. Le but est de garder les choses séparées pour mieux organiser ton projet.
+
